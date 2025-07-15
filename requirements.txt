@@ -5,3 +5,7 @@ scikit-learn
 tensorboard
 matplotlib
 streamlit
+pickle
+
+
+scikeras
