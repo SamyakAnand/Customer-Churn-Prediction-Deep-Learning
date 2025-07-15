@@ -7,7 +7,7 @@ It combines a trained deep learning model, preprocessing pipeline, and user-frie
 ---
 ## ✅ Demo
 
-*()*
+*(https://github.com/SamyakAnand/Customer-Churn-Prediction-Deep-Learning/blob/main/images/Screenshot%202025-07-15%20192007.png)*
 
 ---
 ## 🚀 Features
