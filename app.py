@@ -1,10 +1,14 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import tensorflow as tf
+import logging
 import pickle
 
-from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
+import numpy as np
+import pandas as pd
+import streamlit as st
+import tensorflow as tf
+
+from prediction_utils import extract_single_probability
+
+logger = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------------------
 # Page Configuration
@@ -24,11 +28,13 @@ def load_model(path: str):
     """Load and return the trained Keras model."""
     return tf.keras.models.load_model(path)
 
+
 @st.cache_resource(show_spinner=False)
 def load_pickle(path: str):
     """Generic loader for pickled objects."""
     with open(path, "rb") as f:
         return pickle.load(f)
+
 
 model = load_model("model.h5")
 label_encoder_gender = load_pickle("label_encoder_gender.pkl")
@@ -74,6 +80,7 @@ def preprocess(
     # Combine & scale
     full_df = pd.concat([df, df_geo], axis=1)
     return scaler.transform(full_df)
+
 
 # ------------------------------------------------------------------------------
 # Sidebar: User Inputs
@@ -121,15 +128,14 @@ if st.button("Predict Churn"):
             tenure, num_of_products,
             has_cr_card, is_active_member
         )
-        proba = model.predict(features)[0][0]          # numpy.float32
-
-        # Convert to integer percentage (0–100)
-        churn_pct = int(proba * 100)
+        prediction = model.predict(features)
+        proba = extract_single_probability(prediction)
+        churn_pct = int(round(proba * 100))
 
         col1, col2 = st.columns([2, 1])
         with col1:
             st.subheader("Churn Probability")
-            st.progress(churn_pct)                     # now an int
+            st.progress(churn_pct)
             st.metric(label="Probability", value=f"{churn_pct}%")
 
         with col2:
@@ -137,5 +143,11 @@ if st.button("Predict Churn"):
                 st.error("⚠️ Likely to churn")
             else:
                 st.success("✅ Unlikely to churn")
-    except Exception as e:
-        st.exception(f"Prediction failed: {e}")
+    except Exception:
+        # Do not reflect internal exception details or submitted feature values
+        # into the public-facing Streamlit page.
+        logger.exception("Customer churn prediction failed; input values omitted")
+        st.error(
+            "Prediction could not be completed. Please check the inputs and try again. "
+            "The technical details are available in the server logs."
+        )
